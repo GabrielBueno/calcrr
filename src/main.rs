@@ -12,7 +12,10 @@ fn main() {
 
         match repl::read() {
             repl::Input::Code(code) =>  {
-                parser::parse(lexer::lex(&code));
+                match parser::parse(&lexer::lex(&code)) {
+                    Ok(stmt) => println!("Running"),
+                    Err(err) => println!("{}", err)
+                };
             },
             repl::Input::Quit => {
                 println!("Bye\n");

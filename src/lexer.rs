@@ -7,7 +7,8 @@ struct CodeBuffer<T> {
 pub enum Token {
     Number(i32),
     Identifier(String),
-    Equals, Minus, Plus, Star, Slash, Hat
+    Equals, Minus, Plus, Star, Slash, Hat,
+    LeftParenthesis, RightParenthesis
 }
 
 #[derive(Debug)]
@@ -25,6 +26,10 @@ impl TokenCollection {
             Some(token) => Some(&token),
             None => None
         }
+    }
+
+    pub fn tokens(self: &TokenCollection) -> &[Token] {
+        &self.tokens
     }
 }
 
@@ -44,6 +49,8 @@ pub fn lex(code: &str) -> TokenCollection {
             Some('*') => Some(Token::Star),
             Some('/') => Some(Token::Slash),
             Some('^') => Some(Token::Hat),
+            Some('(') => Some(Token::LeftParenthesis),
+            Some(')') => Some(Token::RightParenthesis),
             Some(ch) => {
                 if ch.is_digit(10) {
                     let buff = read_number(&symbols[start..]);
