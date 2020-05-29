@@ -89,7 +89,7 @@ impl Calc {
     fn memget(self: &Calc, identifier: &str) -> Result<f64, &'static str> {
         match self.mem.get(identifier) {
             Some(val) => Ok(*val),
-            None => Err("There is something on your expression that I cannot understand")
+            None => Err("There is something in your expression that I cannot understand")
         }
     }
 }
