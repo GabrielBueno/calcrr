@@ -1,4 +1,3 @@
-use crate::lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenCollection;
 
@@ -7,6 +6,7 @@ pub enum Stmt {
 	Expr(Expr)
 }
 
+#[derive(Debug)]
 pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Unary(Token, Box<Expr>),
@@ -15,11 +15,9 @@ pub enum Expr {
 }
 
 pub fn parse(tokens: &TokenCollection) -> Result<Stmt, &'static str> {
-	match tokens.head() {
-		Some(Token::Identifier(_)) => attr_stmt(tokens.tokens()),
-		Some(Token::Number(_))     => expr_stmt(tokens.tokens()),
-		None => Ok(Stmt::Expr(Expr::Binary(Box::new(Expr::Literal(Token::Number(0))), Token::Plus, Box::new(Expr::Literal(Token::Number(0)))))),
-		_ => Err("Sorry, this doesn't appear to be correct")
+	match tokens.get(1) {
+		Some(Token::Equals) => attr_stmt(tokens.tokens()),
+		_ => expr_stmt(tokens.tokens())
 	}
 }
 
@@ -46,7 +44,10 @@ fn attr_stmt(tokens: &[Token]) -> Result<Stmt, &'static str> {
 }
 
 fn expr_stmt(tokens: &[Token]) -> Result<Stmt, &'static str> {
-	Ok(Stmt::Expr(expr(tokens).0))
+	match tokens.get(0) {
+		Some(_) => Ok(Stmt::Expr(expr(tokens).0)),
+		None => Ok(Stmt::Expr(empty_expr()))
+	}
 }
 
 fn expr(tokens: &[Token]) -> (Expr, &[Token]) {
@@ -110,8 +111,10 @@ fn literal(tokens: &[Token]) -> Result<(Expr, &[Token]), &'static str> {
 	match tokens.get(0) {
 		Some(Token::Identifier(id))  => Ok((Expr::Literal(Token::Identifier(id.clone())), &tokens[1..])),
 		Some(Token::Number(num))     => Ok((Expr::Literal(Token::Number(*num)), &tokens[1..])),
-		Some(Token::LeftParenthesis) => Ok(grouping(tokens).unwrap()),
-		_ => Err("Invalid token encoutered in expression"),
+		Some(Token::LeftParenthesis) => {
+			Ok(grouping(tokens).unwrap())
+		},
+		_ => Err("Your expression seems to be wrong"),
 	}
 }
 
@@ -121,10 +124,14 @@ fn grouping(tokens: &[Token]) -> Result<(Expr, &[Token]), &'static str> {
 		_ => return Err("Expected opening '('"),
 	};
 
-	let (expr, remaining_tokens) = expr(tokens);
+	let (expr, remaining_tokens) = expr(&tokens[1..]);
 
 	match remaining_tokens.get(0) {
 		Some(Token::RightParenthesis) => Ok((Expr::Grouping(Box::new(expr)), &remaining_tokens[1..])),
 		_ => Err("Expected closing ')'")
 	}
+}
+
+fn empty_expr() -> Expr {
+	Expr::Binary(Box::new(Expr::Literal(Token::Number(0.0))), Token::Plus, Box::new(Expr::Literal(Token::Number(0.0))))
 }

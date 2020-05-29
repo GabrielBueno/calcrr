@@ -5,7 +5,7 @@ struct CodeBuffer<T> {
 
 #[derive(Debug)]
 pub enum Token {
-    Number(i32),
+    Number(f64),
     Identifier(String),
     Equals, Minus, Plus, Star, Slash, Hat,
     LeftParenthesis, RightParenthesis
@@ -28,12 +28,16 @@ impl TokenCollection {
         }
     }
 
+    pub fn len(self: &TokenCollection) -> usize {
+        self.tokens.len()
+    }
+
     pub fn tokens(self: &TokenCollection) -> &[Token] {
         &self.tokens
     }
 }
 
-pub fn lex(code: &str) -> TokenCollection {
+pub fn lex(code: &str) -> Result<TokenCollection, &'static str> {
     let symbols: Vec<char> = code.chars().collect();
     let mut tokens: Vec<Token> = Vec::new();
     let mut start: usize = 0;
@@ -58,12 +62,14 @@ pub fn lex(code: &str) -> TokenCollection {
                     offset = buff.size;
 
                     Some(Token::Number(buff.value))
-                } else {
+                } else if ch.is_alphabetic() || *ch == '_' {
                     let buff = read_identifier(&symbols[start..]);
 
                     offset = buff.size;
 
                     Some(Token::Identifier(buff.value))
+                } else {
+                    return Err("There is an invalid character in your expression")
                 }
             },
             None => break
@@ -77,28 +83,41 @@ pub fn lex(code: &str) -> TokenCollection {
         start += offset;
     }
 
-    TokenCollection { tokens }
+    Ok(TokenCollection { tokens })
 }
 
-fn read_number(code: &[char]) -> CodeBuffer<i32> {
-    let (multiplier, starting_index): (i32, usize) = match code.get(0) {
-        Some('-') => (-1, 1),
-        _ => (1, 0)
+fn read_number(code: &[char]) -> CodeBuffer<f64> {
+    let (multiplier, starting_index): (f64, usize) = match code.get(0) {
+        Some('-') => (-1.0, 1),
+        _ => (1.0, 0)
     };
 
-    let mut num: i32 = 0;
+    let mut num: f64 = 0.0;
     let mut consumed_chars: usize = starting_index;
+    let mut reading_decimal: bool = false;
+    let mut decimal_size: f64 = 0.0;
 
     for c in code[starting_index..].iter() {
+        if *c == '.' {
+            reading_decimal = true;
+
+            consumed_chars += 1;
+            continue;
+        }
+
         match c.to_digit(10) {
-            Some(digit) => num = num * 10 + (digit as i32),
+            Some(digit) => num = num * 10_f64 + (digit as f64),
             None        => break,
         };
+
+        if reading_decimal {
+            decimal_size += 1.0;
+        }
 
         consumed_chars += 1;
     }
 
-    return CodeBuffer { value: num * multiplier, size: consumed_chars };
+    return CodeBuffer { value: num * multiplier / 10_f64.powf(decimal_size), size: consumed_chars };
 }
 
 fn read_identifier(code: &[char]) -> CodeBuffer<String> {
